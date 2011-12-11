@@ -1,9 +1,0 @@
-<schemalist gettext-domain="gnome-shell-extension-sshsearch">
-  <schema id="com.github.brot.sshsearch" path="/com/github/brot/sshsearch/">
-    <key name="terminal-app" type="s">
-      <default>'gnome-terminal'</default>
-      <_summary>Terminal application</_summary>
-      <_description>Choose the terminal application in which the ssh connection will open.</_description>
-    </key>
-  </schema>
-</schemalist>
