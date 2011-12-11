@@ -11,8 +11,9 @@ Install the extension directly from the gnome-shell extension webpage:
 https://extensions.gnome.org/extension/73/ssh-search-provider/
 
 or manually
-* copy or link the folder "ssh-search-provider@gnome-shell-extensions.brot.github.com" to ~/.local/share/gnome-shell/extensions
-* enable extension (e.g. via gnome-tweak-tool)
+
+ * copy or link the folder "ssh-search-provider@gnome-shell-extensions.brot.github.com" to ~/.local/share/gnome-shell/extensions
+ * enable extension (e.g. via gnome-tweak-tool)
 
 ### Selecting Your preferred Terminal Application
 At the moment it isn't possible to configure the preferred terminal app directly.
