@@ -60,7 +60,7 @@ SshSearchProvider.prototype = {
     },
 
     activateResult: function(id) {
-        Util.spawnCommandLine(SSHSEARCH_TERMINAL_APP + ' -e "ssh ' + id.host + '"');
+        Util.spawn([SSHSEARCH_TERMINAL_APP, '-e', 'ssh ' + id.host]);
     },
 
     getInitialResultSet: function(terms) {
