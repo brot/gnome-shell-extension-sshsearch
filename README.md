@@ -7,6 +7,10 @@ So you need a ~/.ssh/config file to use this extensions. It parses
 the config file and search for the strings after the "Host" setting.
 
 ### Installation
+Install the extension directly from the gnome-shell extension webpage:
+https://extensions.gnome.org/extension/73/ssh-search-provider/
+
+or manually
 * copy or link the folder "ssh-search-provider@gnome-shell-extensions.brot.github.com" to ~/.local/share/gnome-shell/extensions
 * enable extension (e.g. via gnome-tweak-tool)
 
