@@ -24,6 +24,7 @@ const Util = imports.misc.util;
 
 // Settings
 const SSHSEARCH_TERMINAL_APP = 'gnome-terminal';
+const HOST_SEARCHSTRING = 'host ';
 
 // sshSearchProvider holds the instance of the search provider
 // implementation. If null, the extension is either uninitialized
@@ -65,19 +66,25 @@ SshSearchProvider.prototype = {
 
     getInitialResultSet: function(terms) {
         if (GLib.file_test(this._configFile, GLib.FileTest.EXISTS)) {
-
+        
+            let names = [];
+            
             let filedata = GLib.file_get_contents(this._configFile, null, 0);
             let filelines = String(filedata[1]).split('\n')
             
-            let names = [];
-            let searchstring = 'Host ';
-            
-            for (var i=0; i<filelines.length; i++) {
-               if (filelines[i].startsWith(searchstring)) {
-                    names.push(filelines[i].slice(searchstring.length));
-               }
+            // search for all lines which begins with "host"
+            for (var i=0; i<filelines.length; i++) {   
+                let line = filelines[i].toLowerCase();
+                if (line.startsWith(HOST_SEARCHSTRING)) {                
+                    // read all hostnames in the host definition line
+                    let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
+                    for (var j=0; j<hostnames.length; j++) {
+                        names.push(hostnames[j]);
+                    }
+                }
             }
                         
+            // check if a found host-name begins like the search-term
             let searchResults = [];
             for (var i=0; i<names.length; i++) {
                 for (var j=0; j<terms.length; j++) {
