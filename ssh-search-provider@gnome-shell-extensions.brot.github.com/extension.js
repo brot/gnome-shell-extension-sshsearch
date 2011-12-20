@@ -31,12 +31,6 @@ const HOST_SEARCHSTRING = 'host ';
 // or has been disabled via disable().
 var sshSearchProvider = null;
 
-if (typeof String.prototype.startsWith != 'function') {
-  String.prototype.startsWith = function (str){
-    return this.slice(0, str.length) == str;
-  };
-}
-
 function SshSearchProvider() {
     this._init();
 }
@@ -75,7 +69,7 @@ SshSearchProvider.prototype = {
             // search for all lines which begins with "host"
             for (var i=0; i<filelines.length; i++) {   
                 let line = filelines[i].toLowerCase();
-                if (line.startsWith(HOST_SEARCHSTRING)) {                
+                if (line.match(HOST_SEARCHSTRING)) {                
                     // read all hostnames in the host definition line
                     let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
                     for (var j=0; j<hostnames.length; j++) {
@@ -88,7 +82,7 @@ SshSearchProvider.prototype = {
             let searchResults = [];
             for (var i=0; i<names.length; i++) {
                 for (var j=0; j<terms.length; j++) {
-                    if (names[i].startsWith(terms[j])) {
+                    if (names[i].match(terms[j])) {
                         searchResults.push({
                                     'host': names[i]
                         });
