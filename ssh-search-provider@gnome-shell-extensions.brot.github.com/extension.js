@@ -19,6 +19,7 @@ const Main = imports.ui.main;
 const Search = imports.ui.search;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
+const Lang = imports.lang;
 const Shell = imports.gi.Shell;
 const Util = imports.misc.util;
 
@@ -40,7 +41,39 @@ SshSearchProvider.prototype = {
 
     _init: function(name) {
         Search.SearchProvider.prototype._init.call(this, "SSH");
-        this._configFile = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);        
+        this._hostnames = [];
+        this._configFile = Gio.file_new_for_path(GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']));
+
+        // add file-monitor the the ssh-config file        
+        this._monitor = this._configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._monitor.connect('changed', Lang.bind(this, this._onConfigChanged));
+        
+        // read ssh-config file when initializing this extension
+        this._onConfigChanged(null, this._configFile, null, Gio.FileMonitorEvent.CREATED);
+    },
+    
+    _onConfigChanged : function(filemonitor, file, other_file, event_type) {
+        this._hostnames = [];
+        if (event_type == Gio.FileMonitorEvent.CREATED ||
+            event_type == Gio.FileMonitorEvent.CHANGED ||
+            event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
+        {
+            // read hostnames if ssh-config file is created or changed
+            let content = file.load_contents(null);
+            let filelines = String(content[1]).split('\n')
+            
+            // search for all lines which begins with "host"
+            for (var i=0; i<filelines.length; i++) {   
+                let line = filelines[i].toLowerCase();
+                if (line.match(HOST_SEARCHSTRING)) {                
+                    // read all hostnames in the host definition line
+                    let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
+                    for (var j=0; j<hostnames.length; j++) {
+                        this._hostnames.push(hostnames[j]);
+                    }
+                }
+            }
+        }
     },
 
     getResultMeta: function(resultId) {
@@ -59,40 +92,20 @@ SshSearchProvider.prototype = {
     },
 
     getInitialResultSet: function(terms) {
-        if (GLib.file_test(this._configFile, GLib.FileTest.EXISTS)) {
+        // check if a found host-name begins like the search-term        
+        let searchResults = [];
+        for (var i=0; i<this._hostnames.length; i++) {
+            for (var j=0; j<terms.length; j++) {
+                if (this._hostnames[i].match(terms[j])) {
+                    searchResults.push({
+                                'host': this._hostnames[i]
+                    });
+                }
+            }
+        }
         
-            let names = [];
-            
-            let filedata = GLib.file_get_contents(this._configFile, null, 0);
-            let filelines = String(filedata[1]).split('\n')
-            
-            // search for all lines which begins with "host"
-            for (var i=0; i<filelines.length; i++) {   
-                let line = filelines[i].toLowerCase();
-                if (line.match(HOST_SEARCHSTRING)) {                
-                    // read all hostnames in the host definition line
-                    let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
-                    for (var j=0; j<hostnames.length; j++) {
-                        names.push(hostnames[j]);
-                    }
-                }
-            }
-                        
-            // check if a found host-name begins like the search-term
-            let searchResults = [];
-            for (var i=0; i<names.length; i++) {
-                for (var j=0; j<terms.length; j++) {
-                    if (names[i].match(terms[j])) {
-                        searchResults.push({
-                                    'host': names[i]
-                        });
-                    }
-                }
-            }
-            
-            if (searchResults.length > 0) {
-                return(searchResults);
-            }
+        if (searchResults.length > 0) {
+            return(searchResults);
         }
         
         return []
