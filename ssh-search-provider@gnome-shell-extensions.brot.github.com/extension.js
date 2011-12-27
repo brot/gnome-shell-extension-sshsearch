@@ -96,10 +96,15 @@ SshSearchProvider.prototype = {
         let searchResults = [];
         for (var i=0; i<this._hostnames.length; i++) {
             for (var j=0; j<terms.length; j++) {
-                if (this._hostnames[i].match(terms[j])) {
-                    searchResults.push({
-                                'host': this._hostnames[i]
-                    });
+                try {
+                    if (this._hostnames[i].match(terms[j])) {
+                        searchResults.push({
+                            'host': this._hostnames[i]
+                        });
+                    }
+                }
+                catch(ex) {
+                    continue;
                 }
             }
         }
