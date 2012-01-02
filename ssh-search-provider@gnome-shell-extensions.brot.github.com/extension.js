@@ -52,7 +52,7 @@ SshSearchProvider.prototype = {
         // init for ~/.ssh/known_hosts
         this._knownHosts = [];
         this._knowhostsFile = Gio.file_new_for_path(GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'known_hosts']));        
-        this._knownhostsMonitor = this._configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this._knownhostsMonitor = this._knowhostsFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
         this._knownhostsMonitor.connect('changed', Lang.bind(this, this._onKnownhostsChanged));
         this._onKnownhostsChanged(null, this._knowhostsFile, null, Gio.FileMonitorEvent.CREATED);
     },
