@@ -114,6 +114,9 @@ SshSearchProvider.prototype = {
         if (resultId.port != 22) {
             ssh_name = ssh_name + ':' + resultId.port;
         }
+        if (resultId.user.length != 0) {
+            ssh_name = resultId.user + '@' + ssh_name
+        }
         
         return { 'id': resultId,
                  'name': ssh_name,
@@ -124,13 +127,17 @@ SshSearchProvider.prototype = {
     },
 
     activateResult: function(id) {
+        let target = id.host;
+        if (id.user.length != 0) {
+            target = id.user + '@' + target;
+        }
         if (id.port == 22) {
             // don't call with the port option, because the host definition 
             // could be from the ~/.ssh/config file
-            Util.spawn([SSHSEARCH_TERMINAL_APP, '-e', 'ssh ' + id.host]);
+            Util.spawn([SSHSEARCH_TERMINAL_APP, '-e', 'ssh ' + target]);
         }
         else {
-            Util.spawn([SSHSEARCH_TERMINAL_APP, '-e', 'ssh -p ' + id.port + ' ' + id.host]);
+            Util.spawn([SSHSEARCH_TERMINAL_APP, '-e', 'ssh -p ' + id.port + ' ' + target]);
         }
     },
     
@@ -139,8 +146,14 @@ SshSearchProvider.prototype = {
         for (var i=0; i<hostnames.length; i++) {
             for (var j=0; j<terms.length; j++) {
                 try {
-                    if (hostnames[i].match(terms[j])) {
-                        let host = hostnames[i];
+                    let term_parts = terms[j].split('@');
+                    let host = term_parts[term_parts.length-1];
+                    let user = '';
+                    if (term_parts.length > 1) {
+                        user = term_parts[0];
+                    }
+                    if (hostnames[i].match(host)) {
+                        host = hostnames[i];
                         let port = 22;
                         
                         // check if hostname is in the format "[ip-address]:port"
@@ -151,6 +164,7 @@ SshSearchProvider.prototype = {
                         }
                         
                         searchResults.push({
+                            'user': user,
                             'host': host,
                             'port': port
                         });
