@@ -59,13 +59,18 @@ SshSearchProvider.prototype = {
     
     _onConfigChanged : function(filemonitor, file, other_file, event_type) {
         this._configHosts = [];
+        
+        if (!file.query_exists (null)) {
+            return
+        }
+        
         if (event_type == Gio.FileMonitorEvent.CREATED ||
             event_type == Gio.FileMonitorEvent.CHANGED ||
             event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
         {
             // read hostnames if ssh-config file is created or changed
             let content = file.load_contents(null);
-            let filelines = String(content[1]).split('\n')
+            let filelines = String(content[1]).trim().split('\n')
             
             // search for all lines which begins with "host"
             for (var i=0; i<filelines.length; i++) {   
@@ -83,13 +88,18 @@ SshSearchProvider.prototype = {
     
     _onKnownhostsChanged : function(filemonitor, file, other_file, event_type) {
         this._knownHosts = [];
+        
+        if (!file.query_exists (null)) {
+            return
+        }
+        
         if (event_type == Gio.FileMonitorEvent.CREATED ||
             event_type == Gio.FileMonitorEvent.CHANGED ||
             event_type == Gio.FileMonitorEvent.CHANGES_DONE_HINT)
         {
             // read hostnames if ssh-known_hosts file is created or changed
             let content = file.load_contents(null);
-            let filelines = String(content[1]).split('\n');
+            let filelines = String(content[1]).trim().split('\n');
 
             for (var i=0; i<filelines.length; i++) {
                 let hostnames = filelines[i].split(' ')[0];
