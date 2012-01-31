@@ -52,27 +52,27 @@ SshSearchProvider.prototype = {
         // init for ~/.ssh/config
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);
         let configFile = Gio.file_new_for_path(filename);
-        this._configMonitor = configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._configMonitor.connect('changed', Lang.bind(this, this._onConfigChanged));
+        this.configMonitor = configFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this.configMonitor.connect('changed', Lang.bind(this, this._onConfigChanged));
         this._onConfigChanged(null, configFile, null, Gio.FileMonitorEvent.CREATED);
 
         // init for ~/.ssh/known_hosts
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'known_hosts']);
         let knownhostsFile = Gio.file_new_for_path(filename);
-        this._knownhostsMonitor = knownhostsFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._knownhostsMonitor.connect('changed', Lang.bind(this, this._onKnownhostsChanged));
+        this.knownhostsMonitor = knownhostsFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this.knownhostsMonitor.connect('changed', Lang.bind(this, this._onKnownhostsChanged));
         this._onKnownhostsChanged(null, knownhostsFile, null, Gio.FileMonitorEvent.CREATED);
 
         // init for /etc/ssh/ssh_known_hosts
         let sshknownhostsFile1 = Gio.file_new_for_path('/etc/ssh/ssh_known_hosts');
-        this._sshknownhostsMonitor1 = sshknownhostsFile1.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._sshknownhostsMonitor1.connect('changed', Lang.bind(this, this._onSshKnownhosts1Changed));
+        this.sshknownhostsMonitor1 = sshknownhostsFile1.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this.sshknownhostsMonitor1.connect('changed', Lang.bind(this, this._onSshKnownhosts1Changed));
         this._onSshKnownhosts1Changed(null, sshknownhostsFile1, null, Gio.FileMonitorEvent.CREATED);
 
         // init for /etc/ssh_known_hosts
         let sshknownhostsFile2 = Gio.file_new_for_path('/etc/ssh_known_hosts');
-        this._sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._sshknownhostsMonitor2.connect('changed', Lang.bind(this, this._onSshKnownhosts2Changed));
+        this.sshknownhostsMonitor2 = sshknownhostsFile2.monitor_file(Gio.FileMonitorFlags.NONE, null);
+        this.sshknownhostsMonitor2.connect('changed', Lang.bind(this, this._onSshKnownhosts2Changed));
         this._onSshKnownhosts2Changed(null, sshknownhostsFile2, null, Gio.FileMonitorEvent.CREATED);
     },
 
@@ -275,6 +275,10 @@ function enable() {
 function disable() {
     if  (sshSearchProvider!=null) {
         Main.overview.removeSearchProvider(sshSearchProvider);
+        sshSearchProvider.configMonitor.cancel();
+        sshSearchProvider.knownhostsMonitor.cancel();
+        sshSearchProvider.sshknownhostsMonitor1.cancel();
+        sshSearchProvider.sshknownhostsMonitor2.cancel();
         sshSearchProvider = null;
     }
 }
