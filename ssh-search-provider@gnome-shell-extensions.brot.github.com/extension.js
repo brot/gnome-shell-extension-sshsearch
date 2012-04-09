@@ -170,6 +170,15 @@ SshSearchProvider.prototype = {
         return knownHosts;
     },
 
+    getResultMetas: function(resultIds) {
+        let metas = [];
+
+        for (let i = 0; i < resultIds.length; i++) {
+            metas.push(this.getResultMeta(resultIds[i]));
+        }
+        return metas;
+    },
+
     getResultMeta: function(resultId) {
         let appSys = Shell.AppSystem.get_default();
         let app = appSys.lookup_app(SSHSEARCH_TERMINAL_APP + '.desktop');
