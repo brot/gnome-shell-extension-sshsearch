@@ -24,6 +24,8 @@ const Shell = imports.gi.Shell;
 const Util = imports.misc.util;
 
 // Settings
+const DEFAULT_TERMINAL_SCHEMA = 'org.gnome.desktop.default-applications.terminal';
+const DEFAULT_TERMINAL_KEY = 'exec';
 const SSHSEARCH_TERMINAL_APP = 'gnome-terminal';
 const HOST_SEARCHSTRING = 'host ';
 
@@ -31,6 +33,20 @@ const HOST_SEARCHSTRING = 'host ';
 // implementation. If null, the extension is either uninitialized
 // or has been disabled via disable().
 var sshSearchProvider = null;
+
+// try to find the default terminal app. fallback is gnome-terminal
+function getDefaultTerminal() {
+    try {
+        if (Gio.Settings.list_schemas().indexOf(DEFAULT_TERMINAL_SCHEMA) == -1)
+            return SSHSEARCH_TERMINAL_APP;
+    
+        let terminal_setting = new Gio.Settings({ schema: DEFAULT_TERMINAL_SCHEMA });
+        return terminal_setting.get_string(DEFAULT_TERMINAL_KEY);
+    } finally {
+        return SSHSEARCH_TERMINAL_APP;
+    }
+
+}
 
 function SshSearchProvider() {
     this._init();
@@ -40,7 +56,9 @@ SshSearchProvider.prototype = {
     __proto__: Search.SearchProvider.prototype,
 
     _init: function(name) {
-        //global.log('init ssh-search');
+        // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
+        //log('init ssh-search');
+
         Search.SearchProvider.prototype._init.call(this, "SSH");
         
         let filename = '';
@@ -48,6 +66,7 @@ SshSearchProvider.prototype = {
         this._knownHosts = [];
         this._sshknownHosts1 = [];
         this._sshknownHosts2 = [];
+        this._terminal_app = getDefaultTerminal();
         
         // init for ~/.ssh/config
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);
@@ -170,18 +189,21 @@ SshSearchProvider.prototype = {
         return knownHosts;
     },
 
-    getResultMetas: function(resultIds) {
-        let metas = [];
-
-        for (let i = 0; i < resultIds.length; i++) {
-            metas.push(this.getResultMeta(resultIds[i]));
+    getResultMetas: function(resultIds, callback) {
+        let metas = resultIds.map(this.getResultMeta, this);
+        // GNOME 3.5.1 or so introduced passing result asynchronously
+        // via callback so try that first - if it fails then simply
+        // return the results to stay compatible with 3.4
+        try {
+            callback(metas);
+        } finally {
+            return metas;
         }
-        return metas;
     },
 
     getResultMeta: function(resultId) {
         let appSys = Shell.AppSystem.get_default();
-        let app = appSys.lookup_app(SSHSEARCH_TERMINAL_APP + '.desktop');
+        let app = appSys.lookup_app(this._terminal_app + '.desktop');
 
         let ssh_name = resultId.host;
         if (resultId.port != 22) {
@@ -207,10 +229,10 @@ SshSearchProvider.prototype = {
         if (id.port == 22) {
             // don't call with the port option, because the host definition
             // could be from the ~/.ssh/config file
-            Util.spawn([SSHSEARCH_TERMINAL_APP, '-e', 'ssh ' + target]);
+            Util.spawn([this._terminal_app, '-e', 'ssh ' + target]);
         }
         else {
-            Util.spawn([SSHSEARCH_TERMINAL_APP, '-e', 'ssh -p ' + id.port + ' ' + target]);
+            Util.spawn([this._terminal_app, '-e', 'ssh -p ' + id.port + ' ' + target]);
         }
     },
 
@@ -251,23 +273,38 @@ SshSearchProvider.prototype = {
         return searchResults;
     },
 
-    getInitialResultSet: function(terms) {
+    _getResultSet: function(sessions, terms) {
         // check if a found host-name begins like the search-term
         let results = [];
+        let res = terms.map(function (term) { return new RegExp(term, 'i'); });
+        
         results = results.concat(this._checkHostnames(this._configHosts, terms));
         results = results.concat(this._checkHostnames(this._knownHosts, terms));
         results = results.concat(this._checkHostnames(this._sshknownHosts1, terms));
         results = results.concat(this._checkHostnames(this._sshknownHosts2, terms));
 
-        if (results.length > 0) {
-            return(results);
+        // GNOME 3.5.1 or so introduced passing result asynchronously
+        // via pushResults() so try that first - if it fails then
+        // simply return the results to stay compatible with 3.4
+        try {
+            this.searchSystem.pushResults(this, results);
+        } finally {
+            return results;
         }
+    },
 
-        return [];
+    getInitialResultSet: function(terms) {
+        // GNOME 3.4 needs the results returned directly whereas 3.5.1
+        // etc will ignore this and instead need pushResults() from
+        // _getResultSet() above
+        return this._getResultSet(this._sessions, terms);
     },
 
     getSubsearchResultSet: function(previousResults, terms) {
-        return this.getInitialResultSet(terms);
+        // GNOME 3.4 needs the results returned directly whereas 3.5.1
+        // etc will ignore this and instead need pushResults() from
+        // _getResultSet() above
+        return this._getResultSet(this._sessions, terms);
     },
 };
 
@@ -275,14 +312,14 @@ function init(meta) {
 }
 
 function enable() {
-    if (sshSearchProvider==null) {
+    if (!sshSearchProvider) {
         sshSearchProvider = new SshSearchProvider();
         Main.overview.addSearchProvider(sshSearchProvider);
     }
 }
 
 function disable() {
-    if  (sshSearchProvider!=null) {
+    if  (sshSearchProvider) {
         Main.overview.removeSearchProvider(sshSearchProvider);
         sshSearchProvider.configMonitor.cancel();
         sshSearchProvider.knownhostsMonitor.cancel();
