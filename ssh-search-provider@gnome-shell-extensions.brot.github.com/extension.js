@@ -37,12 +37,13 @@ var sshSearchProvider = null;
 // try to find the default terminal app. fallback is gnome-terminal
 function getDefaultTerminal() {
     try {
-        if (Gio.Settings.list_schemas().indexOf(DEFAULT_TERMINAL_SCHEMA) == -1)
+        if (Gio.Settings.list_schemas().indexOf(DEFAULT_TERMINAL_SCHEMA) == -1) {
             return SSHSEARCH_TERMINAL_APP;
+        }
     
         let terminal_setting = new Gio.Settings({ schema: DEFAULT_TERMINAL_SCHEMA });
         return terminal_setting.get_string(DEFAULT_TERMINAL_KEY);
-    } finally {
+    } catch (err) {
         return SSHSEARCH_TERMINAL_APP;
     }
 

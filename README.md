@@ -71,23 +71,16 @@ or manually
  * copy or link the folder "ssh-search-provider@gnome-shell-extensions.brot.github.com" to ~/.local/share/gnome-shell/extensions
  * enable extension (e.g. via gnome-tweak-tool)
 
-### Selecting Your preferred Terminal Application
-At the moment it isn't possible to configure the preferred terminal app directly.
-The reason is that gnome-shell in the current stable version (3.2) don't provide
-tools for extensions to create extension specific settings. 
-With the future version of gnome-shell (3.4) this should be possible and then I 
-will provide an updated version of this extension with some gsetting options.
+### Selecting Your preferred Terminal Application (only for gnome-shell > 3.4)
+If you want to replace 'gnome-terminal' with the name of your preferred terminal app so you have to set it in the gsettings. You can do this with the following command on the terminal:
 
-At the moment you could only change the source code directly. So you have to 
-change the file ~/.local/share/gnome-shell/extensions/ssh-search-provider@gnome-shell-extensions.brot.github.com/extension.js
-
-Replace 'gnome-terminal' with the name of your preferred terminal app:
-
-    const SSHSEARCH_TERMINAL_APP = 'gnome-terminal';
+    gsettings set org.gnome.desktop.default-applications.terminal exec <new default editor>
     
-For example
+For example if you want to change gnome-terminal with terminator type:
 
-    const SSHSEARCH_TERMINAL_APP = 'terminator';
+    gsettings set org.gnome.desktop.default-applications.terminal exec terminator
+
+After you changed this setting you have to restart your gnome-shell (ALT-F2 and then "r")
 
 
 ### License
