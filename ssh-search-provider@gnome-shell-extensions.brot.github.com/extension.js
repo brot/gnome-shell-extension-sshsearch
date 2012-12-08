@@ -115,7 +115,7 @@ SshSearchProvider.prototype = {
             // search for all lines which begins with "host"
             for (var i=0; i<filelines.length; i++) {
                 let line = filelines[i].toLowerCase();
-                if (line.match(HOST_SEARCHSTRING)) {
+                if (line.lastIndexOf(HOST_SEARCHSTRING, 0) == 0) {
                     // read all hostnames in the host definition line
                     let hostnames = line.slice(HOST_SEARCHSTRING.length).split(' ');
                     for (var j=0; j<hostnames.length; j++) {
