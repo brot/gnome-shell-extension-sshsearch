@@ -1,6 +1,6 @@
 /* Ssh Search Provider for Gnome Shell
  *
- * Copyright (c) 2011 Bernd Schlapsi
+ * Copyright (c) 2013 Bernd Schlapsi
  *
  * This programm is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 const Main = imports.ui.main;
-const Search = imports.ui.search;
+const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Lang = imports.lang;
 const Shell = imports.gi.Shell;
+const St = imports.gi.St;
 const Util = imports.misc.util;
+const IconGrid = imports.ui.iconGrid;
 
 // Settings
 const DEFAULT_TERMINAL_SCHEMA = 'org.gnome.desktop.default-applications.terminal';
@@ -33,6 +35,32 @@ const HOST_SEARCHSTRING = 'host ';
 // implementation. If null, the extension is either uninitialized
 // or has been disabled via disable().
 var sshSearchProvider = null;
+
+const SshSearchIconBin = new Lang.Class({
+    Name: 'SshSearchIconBin',
+    
+    _init: function(terminal_app, name) {
+        this.actor = new St.Bin({ reactive: true,
+                                  track_hover: true });
+        this._terminal_app = terminal_app
+        this.icon = new IconGrid.BaseIcon(name,
+                                          { showLabel: true,
+                                            createIcon: Lang.bind(this, this.createIcon)});
+        this.actor.child = this.icon.actor;
+        this.actor.label_actor = this.icon.label;                            
+    },
+    
+    createIcon: function(size) {
+        let box = new Clutter.Box();
+        let icon = new St.Icon({ icon_name: 'sshsearch',
+                                 icon_size: size });
+        box.add_child(icon);
+        let emblem = new St.Icon({ icon_name: this._terminal_app,
+                                   icon_size: 96});
+        box.add_child(emblem);
+        return box;
+    }
+});
 
 // try to find the default terminal app. fallback is gnome-terminal
 function getDefaultTerminal() {
@@ -54,15 +82,14 @@ function SshSearchProvider() {
 }
 
 SshSearchProvider.prototype = {
-    __proto__: Search.SearchProvider.prototype,
 
     _init: function(name) {
         // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
         //log('init ssh-search');
 
-        Search.SearchProvider.prototype._init.call(this, "SSH");
-        
+        //Search.SearchProvider.prototype._init.call(this, "SSH");
         let filename = '';
+        this.id = 'SSH'
         this._configHosts = [];
         this._knownHosts = [];
         this._sshknownHosts1 = [];
@@ -190,22 +217,17 @@ SshSearchProvider.prototype = {
         return knownHosts;
     },
 
+    createResultActor: function(result, terms) {
+        let icon = new SshSearchIconBin(this._terminal_app, result.name);
+        return icon.actor;
+    },
+
     getResultMetas: function(resultIds, callback) {
         let metas = resultIds.map(this.getResultMeta, this);
-        // GNOME 3.5.1 or so introduced passing result asynchronously
-        // via callback so try that first - if it fails then simply
-        // return the results to stay compatible with 3.4
-        try {
-            callback(metas);
-        } finally {
-            return metas;
-        }
+        callback(metas);
     },
 
     getResultMeta: function(resultId) {
-        let appSys = Shell.AppSystem.get_default();
-        let app = appSys.lookup_app(this._terminal_app + '.desktop');
-
         let ssh_name = resultId.host;
         if (resultId.port != 22) {
             ssh_name = ssh_name + ':' + resultId.port;
@@ -215,10 +237,7 @@ SshSearchProvider.prototype = {
         }
 
         return { 'id': resultId,
-                 'name': ssh_name,
-                 'createIcon': function(size) {
-                                   return app.create_icon_texture(size);
-                               }
+                 'name': ssh_name
                };
     },
 
@@ -284,27 +303,14 @@ SshSearchProvider.prototype = {
         results = results.concat(this._checkHostnames(this._sshknownHosts1, terms));
         results = results.concat(this._checkHostnames(this._sshknownHosts2, terms));
 
-        // GNOME 3.5.1 or so introduced passing result asynchronously
-        // via pushResults() so try that first - if it fails then
-        // simply return the results to stay compatible with 3.4
-        try {
-            this.searchSystem.pushResults(this, results);
-        } finally {
-            return results;
-        }
+        this.searchSystem.pushResults(this, results);
     },
 
     getInitialResultSet: function(terms) {
-        // GNOME 3.4 needs the results returned directly whereas 3.5.1
-        // etc will ignore this and instead need pushResults() from
-        // _getResultSet() above
         return this._getResultSet(this._sessions, terms);
     },
 
     getSubsearchResultSet: function(previousResults, terms) {
-        // GNOME 3.4 needs the results returned directly whereas 3.5.1
-        // etc will ignore this and instead need pushResults() from
-        // _getResultSet() above
         return this._getResultSet(this._sessions, terms);
     },
 };
