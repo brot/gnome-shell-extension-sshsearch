@@ -80,8 +80,14 @@ For example if you want to change gnome-terminal with terminator type:
 
     gsettings set org.gnome.desktop.default-applications.terminal exec terminator
 
-After you changed this setting you have to restart your gnome-shell (ALT-F2 and then "r")
+#### Define arguments for your Terminal Application (only for gnome-shell >= 3.8)
+If you want to add some arguments for your terminal app you can set this arguments with
 
+    gsettings set org.gnome.desktop.default-applications.terminal exec-arg "<args>"
+
+For example if you want to use terminator in borderless mode type:
+
+    gsettings set org.gnome.desktop.default-applications.terminal exec-arg "--borderless"
 
 ### License
 Copyright (c) 2011 Bernd Schlapsi <brot@gmx.info>

@@ -28,6 +28,7 @@ const IconGrid = imports.ui.iconGrid;
 // Settings
 const DEFAULT_TERMINAL_SCHEMA = 'org.gnome.desktop.default-applications.terminal';
 const DEFAULT_TERMINAL_KEY = 'exec';
+const DEFAULT_TERMINAL_ARGS_KEY = 'exec-arg';
 const SSHSEARCH_TERMINAL_APP = 'gnome-terminal';
 const HOST_SEARCHSTRING = 'host ';
 
@@ -38,7 +39,7 @@ var sshSearchProvider = null;
 
 const SshSearchIconBin = new Lang.Class({
     Name: 'SshSearchIconBin',
-    
+
     _init: function(terminal_app, name) {
         this.actor = new St.Bin({ reactive: true,
                                   track_hover: true });
@@ -47,9 +48,9 @@ const SshSearchIconBin = new Lang.Class({
                                           { showLabel: true,
                                             createIcon: Lang.bind(this, this.createIcon)});
         this.actor.child = this.icon.actor;
-        this.actor.label_actor = this.icon.label;                            
+        this.actor.label_actor = this.icon.label;
     },
-    
+
     createIcon: function(size) {
         let box = new Clutter.Box();
         let icon = new St.Icon({ icon_name: 'sshsearch',
@@ -66,13 +67,19 @@ const SshSearchIconBin = new Lang.Class({
 function getDefaultTerminal() {
     try {
         if (Gio.Settings.list_schemas().indexOf(DEFAULT_TERMINAL_SCHEMA) == -1) {
-            return SSHSEARCH_TERMINAL_APP;
+            return {'exec': SSHSEARCH_TERMINAL_APP,
+                    'args': ''
+                   };
         }
-    
+
         let terminal_setting = new Gio.Settings({ schema: DEFAULT_TERMINAL_SCHEMA });
-        return terminal_setting.get_string(DEFAULT_TERMINAL_KEY);
+        return {'exec': terminal_setting.get_string(DEFAULT_TERMINAL_KEY),
+                'args': terminal_setting.get_string(DEFAULT_TERMINAL_ARGS_KEY)
+               };
     } catch (err) {
-        return SSHSEARCH_TERMINAL_APP;
+        return {'exec': SSHSEARCH_TERMINAL_APP,
+                'args': ''
+               };
     }
 
 }
@@ -85,17 +92,18 @@ SshSearchProvider.prototype = {
 
     _init: function(name) {
         // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
+        // Since gnome-shell 3.8 the log output is in /var/log/messages
         //log('init ssh-search');
 
-        //Search.SearchProvider.prototype._init.call(this, "SSH");
         let filename = '';
+        let terminal_definition = {};
+
         this.id = 'SSH'
         this._configHosts = [];
         this._knownHosts = [];
         this._sshknownHosts1 = [];
         this._sshknownHosts2 = [];
-        this._terminal_app = getDefaultTerminal();
-        
+
         // init for ~/.ssh/config
         filename = GLib.build_filenamev([GLib.get_home_dir(), '/.ssh/', 'config']);
         let configFile = Gio.file_new_for_path(filename);
@@ -218,7 +226,9 @@ SshSearchProvider.prototype = {
     },
 
     createResultActor: function(result, terms) {
-        let icon = new SshSearchIconBin(this._terminal_app, result.name);
+        let terminal_definition = getDefaultTerminal();
+        let icon = new SshSearchIconBin(terminal_definition.exec,
+                                        result.name);
         return icon.actor;
     },
 
@@ -243,17 +253,36 @@ SshSearchProvider.prototype = {
 
     activateResult: function(id) {
         let target = id.host;
+        let terminal_definition = getDefaultTerminal();
+        let terminal_args = terminal_definition.args.split(' ');
+        let cmd = [terminal_definition.exec]
+
+        // add defined gsettings arguments, but remove --execute and -x
+        for (var i=0; i<terminal_args.length; i++) {
+            let arg = terminal_args[i];
+
+            if (arg != '--execute' && arg != '-x') {
+                cmd.push(terminal_args[i]);
+            }
+        }
+
+        // build command
+        cmd.push('--command')
+
         if (id.user.length != 0) {
             target = id.user + '@' + target;
         }
         if (id.port == 22) {
             // don't call with the port option, because the host definition
             // could be from the ~/.ssh/config file
-            Util.spawn([this._terminal_app, '-e', 'ssh ' + target]);
+            cmd.push('ssh ' + target);
         }
         else {
-            Util.spawn([this._terminal_app, '-e', 'ssh -p ' + id.port + ' ' + target]);
+            cmd.push('ssh -p ' + id.port + ' ' + target);
         }
+
+        // start terminal with ssh command
+        Util.spawn(cmd);
     },
 
     _checkHostnames: function(hostnames, terms) {
@@ -297,7 +326,7 @@ SshSearchProvider.prototype = {
         // check if a found host-name begins like the search-term
         let results = [];
         let res = terms.map(function (term) { return new RegExp(term, 'i'); });
-        
+
         results = results.concat(this._checkHostnames(this._configHosts, terms));
         results = results.concat(this._checkHostnames(this._knownHosts, terms));
         results = results.concat(this._checkHostnames(this._sshknownHosts1, terms));
