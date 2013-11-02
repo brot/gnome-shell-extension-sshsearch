@@ -20,6 +20,7 @@ const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Lang = imports.lang;
+const Search = imports.ui.search;
 const Shell = imports.gi.Shell;
 const St = imports.gi.St;
 const Util = imports.misc.util;
@@ -36,32 +37,6 @@ const HOST_SEARCHSTRING = 'host ';
 // implementation. If null, the extension is either uninitialized
 // or has been disabled via disable().
 var sshSearchProvider = null;
-
-const SshSearchIconBin = new Lang.Class({
-    Name: 'SshSearchIconBin',
-
-    _init: function(terminal_app, name) {
-        this.actor = new St.Bin({ reactive: true,
-                                  track_hover: true });
-        this._terminal_app = terminal_app
-        this.icon = new IconGrid.BaseIcon(name,
-                                          { showLabel: true,
-                                            createIcon: Lang.bind(this, this.createIcon)});
-        this.actor.child = this.icon.actor;
-        this.actor.label_actor = this.icon.label;
-    },
-
-    createIcon: function(size) {
-        let box = new Clutter.Box();
-        let icon = new St.Icon({ icon_name: 'sshsearch',
-                                 icon_size: size });
-        box.add_child(icon);
-        let emblem = new St.Icon({ icon_name: this._terminal_app,
-                                   icon_size: 96});
-        box.add_child(emblem);
-        return box;
-    }
-});
 
 // try to find the default terminal app. fallback is gnome-terminal
 function getDefaultTerminal() {
@@ -81,24 +56,24 @@ function getDefaultTerminal() {
                 'args': ''
                };
     }
-
 }
 
-function SshSearchProvider() {
-    this._init();
-}
+//SshSearchProvider.prototype = {
+const SshSearchProvider = new Lang.Class({
+    Name: 'SshSearchProvider',
+    Extends: Search.SearchProvider,
 
-SshSearchProvider.prototype = {
-
-    _init: function(name) {
+    _init: function() {
         // Since gnome-shell 3.6 the log output is in ~/.cache/gdm/session.log
         // Since gnome-shell 3.8 the log output is in /var/log/messages
+        // Since gnome-shell 3.10 you get log output with "journalctl -f"
         //log('init ssh-search');
 
         let filename = '';
         let terminal_definition = {};
 
-        this.id = 'SSH'
+        this.title = "SSHSearch";
+        this.searchSystem = null;
         this._configHosts = [];
         this._knownHosts = [];
         this._sshknownHosts1 = [];
@@ -225,11 +200,8 @@ SshSearchProvider.prototype = {
         return knownHosts;
     },
 
-    createResultActor: function(result, terms) {
-        let terminal_definition = getDefaultTerminal();
-        let icon = new SshSearchIconBin(terminal_definition.exec,
-                                        result.name);
-        return icon.actor;
+    createResultObject: function(result, terms) {
+        return null;
     },
 
     getResultMetas: function(resultIds, callback) {
@@ -239,6 +211,7 @@ SshSearchProvider.prototype = {
 
     getResultMeta: function(resultId) {
         let ssh_name = resultId.host;
+        let terminal_definition = getDefaultTerminal();
         if (resultId.port != 22) {
             ssh_name = ssh_name + ':' + resultId.port;
         }
@@ -247,7 +220,12 @@ SshSearchProvider.prototype = {
         }
 
         return { 'id': resultId,
-                 'name': ssh_name
+                 'name': ssh_name,
+                 'createIcon': function(size) {
+                        let xicon = new Gio.ThemedIcon({name: terminal_definition.exec});
+                        return new St.Icon({icon_size: size,
+                                            gicon: xicon});
+                 }
                };
     },
 
@@ -322,6 +300,10 @@ SshSearchProvider.prototype = {
         return searchResults;
     },
 
+    filterResults: function(providerResults, maxResults) {
+        return providerResults;
+    },
+
     _getResultSet: function(sessions, terms) {
         // check if a found host-name begins like the search-term
         let results = [];
@@ -332,7 +314,7 @@ SshSearchProvider.prototype = {
         results = results.concat(this._checkHostnames(this._sshknownHosts1, terms));
         results = results.concat(this._checkHostnames(this._sshknownHosts2, terms));
 
-        this.searchSystem.pushResults(this, results);
+        this.searchSystem.setResults(this, results);
     },
 
     getInitialResultSet: function(terms) {
@@ -342,9 +324,9 @@ SshSearchProvider.prototype = {
     getSubsearchResultSet: function(previousResults, terms) {
         return this._getResultSet(this._sessions, terms);
     },
-};
+});
 
-function init(meta) {
+function init() {
 }
 
 function enable() {
