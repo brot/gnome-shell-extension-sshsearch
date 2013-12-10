@@ -239,7 +239,7 @@ const SshSearchProvider = new Lang.Class({
         for (var i=0; i<terminal_args.length; i++) {
             let arg = terminal_args[i];
 
-            if (arg != '--execute' && arg != '-x') {
+            if (arg != '--execute' && arg != '-x' && arg != '--command' && arg != '-e') {
                 cmd.push(terminal_args[i]);
             }
         }
