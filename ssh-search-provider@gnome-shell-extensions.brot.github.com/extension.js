@@ -257,11 +257,11 @@ SshSearchProvider.prototype = {
         let terminal_args = terminal_definition.args.split(' ');
         let cmd = [terminal_definition.exec]
 
-        // add defined gsettings arguments, but remove --execute and -x
+        // add defined gsettings arguments, but remove --execute, --command, -e and -x
         for (var i=0; i<terminal_args.length; i++) {
             let arg = terminal_args[i];
 
-            if (arg != '--execute' && arg != '-x') {
+            if (arg != '--execute' && arg != '-x' && arg != '--command' && arg != '-e') {
                 cmd.push(terminal_args[i]);
             }
         }
